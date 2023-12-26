@@ -3,8 +3,6 @@ import 'package:chat_app/constants/strings.dart';
 import 'package:chat_app/presentation/home/home.dart';
 import 'package:chat_app/presentation/home/store/language/language_store.dart';
 import 'package:chat_app/presentation/home/store/theme/theme_store.dart';
-import 'package:chat_app/presentation/login/login.dart';
-import 'package:chat_app/presentation/login/store/login_store.dart';
 import 'package:chat_app/utils/locale/app_localization.dart';
 import 'package:chat_app/utils/routes/routes.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +17,7 @@ class MyApp extends StatelessWidget {
   // with Hot Reload than creating it directly in the `build` function.
   final ThemeStore _themeStore = getIt<ThemeStore>();
   final LanguageStore _languageStore = getIt<LanguageStore>();
-  final UserStore _userStore = getIt<UserStore>();
+  // final UserStore _userStore = getIt<UserStore>();
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +44,7 @@ class MyApp extends StatelessWidget {
             // Built-in localization of basic text for Cupertino widgets
             GlobalCupertinoLocalizations.delegate,
           ],
-          home: _userStore.isLoggedIn ? HomeScreen() : LoginScreen(),
+          home: HomeScreen(),
         );
       },
     );
