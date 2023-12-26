@@ -1,5 +1,4 @@
 import 'package:another_flushbar/flushbar_helper.dart';
-import 'package:chat_app/core/widgets/progress_indicator_widget.dart';
 import 'package:chat_app/di/service_locator.dart';
 import 'package:chat_app/presentation/thread/thread/thread_store.dart';
 import 'package:chat_app/utils/locale/app_localization.dart';

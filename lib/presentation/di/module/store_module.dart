@@ -5,6 +5,7 @@ import 'package:chat_app/core/stores/form/form_store.dart';
 import 'package:chat_app/domain/repository/setting/setting_repository.dart';
 import 'package:chat_app/presentation/home/store/language/language_store.dart';
 import 'package:chat_app/presentation/home/store/theme/theme_store.dart';
+import 'package:chat_app/presentation/thread/thread/thread_store.dart';
 
 import '../../../di/service_locator.dart';
 
@@ -29,6 +30,12 @@ mixin StoreModule {
     getIt.registerSingleton<LanguageStore>(
       LanguageStore(
         getIt<SettingRepository>(),
+        getIt<ErrorStore>(),
+      ),
+    );
+
+    getIt.registerSingleton<ThreadStore>(
+      ThreadStore(
         getIt<ErrorStore>(),
       ),
     );

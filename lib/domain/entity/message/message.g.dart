@@ -18,7 +18,7 @@ class MessageAdapter extends TypeAdapter<Message> {
     };
     return Message(
       id: fields[0] as int,
-      conversationId: fields[1] as int,
+      threadId: fields[1] as int,
       title: fields[2] as String,
       createdAt: fields[3] as int,
       updatedAt: fields[4] as int?,
@@ -34,7 +34,7 @@ class MessageAdapter extends TypeAdapter<Message> {
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.conversationId)
+      ..write(obj.threadId)
       ..writeByte(2)
       ..write(obj.title)
       ..writeByte(3)

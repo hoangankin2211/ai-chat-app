@@ -13,7 +13,7 @@ class Message {
   int id;
 
   @HiveField(1)
-  int conversationId;
+  int threadId;
 
   @HiveField(2)
   String title;
@@ -31,7 +31,7 @@ class Message {
   String type;
   Message({
     required this.id,
-    required this.conversationId,
+    required this.threadId,
     required this.title,
     required this.createdAt,
     this.updatedAt,
@@ -42,7 +42,7 @@ class Message {
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'id': id,
-      'conversationId': conversationId,
+      'conversationId': threadId,
       'title': title,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
@@ -54,7 +54,7 @@ class Message {
   factory Message.fromMap(Map<String, dynamic> map) {
     return Message(
       id: map['id'] as int,
-      conversationId: map['conversationId'] as int,
+      threadId: map['conversationId'] as int,
       title: map['title'] as String,
       createdAt: map['createdAt'] as int,
       updatedAt: map['updatedAt'] != null ? map['updatedAt'] as int : null,

@@ -2,7 +2,6 @@ import 'package:chat_app/core/data/network/dio/configs/dio_configs.dart';
 import 'package:chat_app/core/data/network/dio/dio_client.dart';
 import 'package:chat_app/core/data/network/dio/interceptors/auth_interceptor.dart';
 import 'package:chat_app/core/data/network/dio/interceptors/logging_interceptor.dart';
-import 'package:chat_app/data/network/apis/posts/post_api.dart';
 import 'package:chat_app/data/network/constants/endpoints.dart';
 import 'package:chat_app/data/network/interceptors/error_interceptor.dart';
 import 'package:chat_app/data/network/rest_client.dart';
@@ -49,6 +48,6 @@ mixin NetworkModule {
     );
 
     // api's:-------------------------------------------------------------------
-    getIt.registerSingleton(PostApi(getIt<DioClient>(), getIt<RestClient>()));
+    // getIt.registerSingleton(PostApi(getIt<DioClient>(), getIt<RestClient>()));
   }
 }
