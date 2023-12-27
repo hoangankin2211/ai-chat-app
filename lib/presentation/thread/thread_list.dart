@@ -109,13 +109,7 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
             ),
           ),
           if (_threadStore.threadList?.isEmpty ?? true)
-            Expanded(
-              child: Center(
-                child: Text(
-                  "No Thread Found",
-                ),
-              ),
-            ),
+            Expanded(child: Center(child: Text("No Thread Found"))),
           const Spacer(),
           Divider(
             height: 10,

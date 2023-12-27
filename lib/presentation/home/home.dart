@@ -1,7 +1,10 @@
 import 'dart:async';
 
 import 'package:chat_app/di/service_locator.dart';
+import 'package:chat_app/domain/entity/message/message.dart';
+import 'package:chat_app/domain/entity/message/role.dart';
 import 'package:chat_app/presentation/home/store/language/language_store.dart';
+import 'package:chat_app/presentation/home/store/message/message_store.dart';
 import 'package:chat_app/presentation/home/store/theme/theme_store.dart';
 import 'package:chat_app/presentation/thread/thread_list.dart';
 import 'package:chat_app/utils/locale/app_localization.dart';
@@ -16,15 +19,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   //stores:---------------------------------------------------------------------
+  final MessageStore _messageStore = getIt<MessageStore>();
   final ThemeStore _themeStore = getIt<ThemeStore>();
   final LanguageStore _languageStore = getIt<LanguageStore>();
-  final StreamController<String> _streamController =
-      StreamController.broadcast();
-  late final Stream<String> _messageStream;
-  final List<String> listMessage = [];
+  // final StreamController<Message> _streamController =
+  //     StreamController.broadcast();
+  // late final Stream<Message> _messageStream;
+  late List<Message> listMessage;
   @override
   void initState() {
-    _messageStream = _streamController.stream;
+    // _messageStream = _streamController.stream.asBroadcastStream();
+    _messageStore.getMessages();
     super.initState();
   }
 
@@ -51,8 +56,13 @@ class _HomeScreenState extends State<HomeScreen> {
             isListening: false,
             micAvailable: true,
             onSubmitted: () {
-              _streamController.add(_textEditingController.text);
-              _textEditingController.clear();
+              // _streamController.add();
+              if (_textEditingController.text.isNotEmpty) {
+                _messageStore.addMessage(
+                    message: _textEditingController.value.text,
+                    role: Role.user);
+                _textEditingController.clear();
+              }
             },
             onVoiceStart: () {},
             onVoiceStop: () {},
@@ -138,8 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Flexible(
               child: Padding(
                 padding: const EdgeInsets.only(left: 45),
-                child: Text(
-                    "sadfsdafasdfsssssssvsadfsdafasdfssssssssadfsdafasdfssssssssadfsdafasdfssssssssadfsdafasdfssssssssadfsdafasdfssssssssadfsdafasdfssssssssadfsdafasdfssssssssadfsdafasdfsssssss"),
+                child: Text(message),
               ),
             )
           ],
@@ -150,32 +159,45 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget buildListMessage() {
-    return StreamBuilder<String>(
-      stream: _messageStream,
-      builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
-        if (snapshot.hasData) {
-          if (snapshot.requireData.length > 0) {
-            listMessage.add(snapshot.requireData);
-            return ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              separatorBuilder: (context, index) => const SizedBox(height: 5),
-              itemBuilder: (context, index) =>
-                  buildItem(context, "ChatGPT", listMessage.elementAt(index)),
-              itemCount: listMessage.length,
-              reverse: true,
-              controller: ScrollController(),
-            );
-          } else {
-            return Center(child: Text("No message here yet..."));
-          }
-        } else {
-          return Center(
-            child: CircularProgressIndicator(
-              color: Theme.of(context).primaryColor,
-            ),
-          );
-        }
-      },
+    return Observer(
+      builder: (context) => ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        separatorBuilder: (context, index) => const SizedBox(height: 5),
+        itemBuilder: (context, index) =>
+            // index == _messageStore.listMessage.length
+            //     ? (_messageStore.streamMessage != null
+            //         ? Observer(
+            //             builder: (context) => StreamBuilder<String>(
+            //               stream: _messageStore.streamMessage,
+            //               builder: (context, snapshot) {
+            //                 if (snapshot.hasData &&
+            //                     snapshot.data != null &&
+            //                     snapshot.data!.isNotEmpty) {
+            //                   return buildItem(
+            //                       context, Role.assistant.name, snapshot.data!);
+            //                 } else {
+            //                   return const SizedBox();
+            //                 }
+            //               },
+            //             ),
+            //           )
+            //         : const SizedBox())
+            //     :
+            StreamBuilder<String>(
+                stream: _messageStore.listMessage
+                    .elementAt(index)
+                    .createResponseMessage(),
+                builder: (context, snapshot) {
+                  return buildItem(
+                    context,
+                    _messageStore.listMessage.elementAt(index).message?.role ??
+                        Role.assistant.name,
+                    snapshot.data ?? "",
+                  );
+                }),
+        itemCount: _messageStore.listMessage.length,
+        controller: ScrollController(),
+      ),
     );
   }
 
@@ -218,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () {
                   Navigator.of(context).pop();
                   // change user language based on selected locale
-                  _languageStore.changeLanguage(object.locale!);
+                  _languageStore.changeLanguage(object.locale);
                 },
               ),
             )
@@ -244,6 +266,7 @@ class InputWidget extends StatefulWidget {
   final Function() onVoiceStart;
   final Function() onVoiceStop;
   final bool micAvailable;
+
   const InputWidget({
     required this.textEditingController,
     required this.onSubmitted,

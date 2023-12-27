@@ -14,14 +14,18 @@ class MessageDataSource {
     return messageBox.get(id);
   }
 
-  Message? getMessageByThread(int threadId) {
-    return messageBox.values
-        .firstWhere((message) => message.threadId == threadId);
+  List<Message>? getMessageByThread(int threadId) {
+    try {
+      return messageBox.values
+          .where((message) => message.threadId == threadId)
+          .toList();
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<int> insertMessage(Message message) async {
     int id = await messageBox.add(message);
-    updateMessage(message.copyWith(id: id));
     return id;
   }
 

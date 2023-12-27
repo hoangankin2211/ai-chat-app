@@ -1,4 +1,11 @@
+import 'package:chat_app/core/stores/error/error_store.dart';
+import 'package:chat_app/domain/entity/message/message.dart';
+import 'package:chat_app/domain/entity/message/role.dart';
 import 'package:chat_app/domain/entity/thread/thread.dart';
+import 'package:chat_app/domain/usecase/message/add_new_message_usecase.dart';
+import 'package:chat_app/domain/usecase/message/get_thread_message_usecase.dart';
+import 'package:chat_app/domain/usecase/thread/insert_thread_usecase.dart';
+import 'package:chat_app/presentation/home/store/message/message_ui.dart';
 import 'package:dart_openai/dart_openai.dart';
 import 'package:hive/hive.dart';
 import 'package:mobx/mobx.dart';
@@ -8,14 +15,111 @@ part 'message_store.g.dart';
 class MessageStore = _MessageStore with _$MessageStore;
 
 abstract class _MessageStore with Store {
+  final AddNewMessageUseCase _addNewMessageUseCase;
+  final GetThreadMessageUseCase _getThreadMessageUseCase;
+  final InsertThreadUseCase _insertThreadUseCase;
+  final ErrorStore errorStore;
+
   // constructor:---------------------------------------------------------------
-  _MessageStore() {
+  _MessageStore(
+    this._addNewMessageUseCase,
+    this._getThreadMessageUseCase,
+    this.errorStore,
+    this._insertThreadUseCase,
+  ) {
     init();
   }
 
+  static ObservableFuture<List<Message>> emptyMessageResponse =
+      ObservableFuture.value([]);
+
+  @observable
+  List<MessageUI> listMessage = [];
+
+  @observable
+  Thread? thread;
+
+  @observable
+  bool success = false;
+
+  @observable
+  bool loadingMessage = false;
+
+  @computed
+  bool get loading => fetchMessagesFuture.status == FutureStatus.pending;
+
+  @computed
+  bool get addMessageSuccess =>
+      fetchMessagesFuture.status == FutureStatus.fulfilled;
+
+  @observable
+  ObservableFuture<List<Message>> fetchMessagesFuture =
+      ObservableFuture<List<Message>>(emptyMessageResponse);
+
   // actions:-------------------------------------------------------------------
+
   @action
-  Stream<OpenAIStreamChatCompletionModel> sendMessage(String value) {
+  Future getMessages() async {
+    if (thread == null) {
+      this.thread = await _insertThreadUseCase.call(
+        params: Thread(
+          id: 0,
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+        ),
+      );
+    }
+    final future = _getThreadMessageUseCase.call(params: thread!.id);
+    fetchMessagesFuture = ObservableFuture(future.then((value) {
+      if (value != null) return value;
+      return [];
+    }));
+
+    future.then((messageList) {
+      this.listMessage = (messageList ?? [])
+          .map(
+            (e) => MessageUI(message: e),
+          )
+          .toList();
+    }).catchError((error) {
+      errorStore.errorMessage = error.toString();
+    });
+  }
+
+  @action
+  Future addMessage({required String message, required Role role}) async {
+    if (thread == null) {
+      this.thread = await _insertThreadUseCase.call(
+        params: Thread(
+          id: 0,
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+        ),
+      );
+    }
+
+    final future = await _addNewMessageUseCase.call(
+      params: Message(
+        id: 0,
+        threadId: thread!.id,
+        title: message,
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+        role: role.name,
+      ),
+    );
+    this.listMessage = [
+      ...listMessage,
+      MessageUI(
+        message: future,
+        isLoadingMessage: false,
+        // streamString: sendMessage(future.title),
+      ),
+      MessageUI(
+        isLoadingMessage: true,
+        streamString: sendMessage(future.title),
+      )
+    ];
+  }
+
+  Stream<String> sendMessage(String value) {
     // The user message to be sent to the request.
     final userMessage = OpenAIChatCompletionChoiceMessageModel(
       content: value,
@@ -26,7 +130,8 @@ abstract class _MessageStore with Store {
       messages: [userMessage],
       n: 2,
     );
-    return chatStream;
+    return chatStream
+        .map((event) => event.choices.map((e) => e.finishReason).join());
   }
 
   @action

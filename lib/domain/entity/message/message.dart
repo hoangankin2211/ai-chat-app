@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
 
+import 'package:chat_app/domain/entity/message/role.dart';
 import 'package:hive/hive.dart';
 
 import 'package:chat_app/constants/hive_constant.dart';
@@ -24,19 +25,16 @@ class Message {
   @HiveField(4)
   int? updatedAt;
 
-  @HiveField(5)
-  String status;
-
   @HiveField(6)
-  String type;
+  String role;
+
   Message({
     required this.id,
     required this.threadId,
     required this.title,
     required this.createdAt,
     this.updatedAt,
-    required this.status,
-    required this.type,
+    required this.role,
   });
 
   Map<String, dynamic> toMap() {
@@ -46,8 +44,7 @@ class Message {
       'title': title,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
-      'status': status,
-      'type': type,
+      'type': role,
     };
   }
 
@@ -58,8 +55,8 @@ class Message {
       title: map['title'] as String,
       createdAt: map['createdAt'] as int,
       updatedAt: map['updatedAt'] != null ? map['updatedAt'] as int : null,
-      status: map['status'] as String,
-      type: map['type'] as String,
+      role:
+          Role.values.firstWhere((element) => element.name == map['type']).name,
     );
   }
 
@@ -75,7 +72,7 @@ class Message {
     int? createdAt,
     int? updatedAt,
     String? status,
-    String? type,
+    String? role,
   }) {
     return Message(
       id: id ?? this.id,
@@ -83,8 +80,7 @@ class Message {
       title: title ?? this.title,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      status: status ?? this.status,
-      type: type ?? this.type,
+      role: role ?? this.role,
     );
   }
 }
