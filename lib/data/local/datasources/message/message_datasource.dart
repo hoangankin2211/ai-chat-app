@@ -19,15 +19,17 @@ class MessageDataSource {
         .firstWhere((message) => message.threadId == threadId);
   }
 
-  void insertMessage(Message message) {
-    messageBox.add(message);
+  Future<int> insertMessage(Message message) async {
+    int id = await messageBox.add(message);
+    updateMessage(message.copyWith(id: id));
+    return id;
   }
 
   void updateMessage(Message message) {
     messageBox.put(message.id, message);
   }
 
-  void deleteMessage(int id) {
-    messageBox.delete(id);
+  Future<void> deleteMessage(int id) {
+    return messageBox.delete(id);
   }
 }

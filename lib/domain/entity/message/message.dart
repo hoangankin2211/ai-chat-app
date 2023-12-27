@@ -67,4 +67,24 @@ class Message {
 
   factory Message.fromJson(String source) =>
       Message.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  Message copyWith({
+    int? id,
+    int? threadId,
+    String? title,
+    int? createdAt,
+    int? updatedAt,
+    String? status,
+    String? type,
+  }) {
+    return Message(
+      id: id ?? this.id,
+      threadId: threadId ?? this.threadId,
+      title: title ?? this.title,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      status: status ?? this.status,
+      type: type ?? this.type,
+    );
+  }
 }

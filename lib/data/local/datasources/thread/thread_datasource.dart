@@ -14,15 +14,17 @@ class ThreadDataSource {
     return threadBox.get(id);
   }
 
-  void insertThread(Thread thread) {
-    threadBox.add(thread);
+  Future<int> insertThread(Thread thread) async {
+    int id = await threadBox.add(thread);
+    updateThread(thread.copyWith(id: id));
+    return id;
   }
 
   void updateThread(Thread thread) {
     threadBox.put(thread.id, thread);
   }
 
-  void deleteThread(int id) {
-    threadBox.delete(id);
+  Future<void> deleteThread(int id) async {
+    return threadBox.delete(id);
   }
 }

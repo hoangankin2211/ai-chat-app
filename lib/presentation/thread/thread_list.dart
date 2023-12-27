@@ -54,7 +54,7 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
   }
 
   Widget _buildListView() {
-    return [] != null
+    return [].isEmpty
         ? Padding(
             padding:
                 const EdgeInsets.only(left: 8, right: 8, bottom: 10, top: 30),
