@@ -126,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget buildItem(BuildContext context, String sender, String message) {
+  Widget buildItem(String sender, String message) {
     return InkWell(
       onTap: () {},
       child: Container(
@@ -163,39 +163,54 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) => ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         separatorBuilder: (context, index) => const SizedBox(height: 5),
-        itemBuilder: (context, index) =>
-            // index == _messageStore.listMessage.length
-            //     ? (_messageStore.streamMessage != null
-            //         ? Observer(
-            //             builder: (context) => StreamBuilder<String>(
-            //               stream: _messageStore.streamMessage,
-            //               builder: (context, snapshot) {
-            //                 if (snapshot.hasData &&
-            //                     snapshot.data != null &&
-            //                     snapshot.data!.isNotEmpty) {
-            //                   return buildItem(
-            //                       context, Role.assistant.name, snapshot.data!);
-            //                 } else {
-            //                   return const SizedBox();
-            //                 }
-            //               },
-            //             ),
-            //           )
-            //         : const SizedBox())
-            //     :
-            StreamBuilder<String>(
-                stream: _messageStore.listMessage
-                    .elementAt(index)
-                    .createResponseMessage(),
+        itemBuilder: (context, index) {
+          // index == _messageStore.listMessage.length
+          //     ? (_messageStore.streamMessage != null
+          //         ? Observer(
+          //             builder: (context) => StreamBuilder<String>(
+          //               stream: _messageStore.streamMessage,
+          //               builder: (context, snapshot) {
+          //                 if (snapshot.hasData &&
+          //                     snapshot.data != null &&
+          //                     snapshot.data!.isNotEmpty) {
+          //                   return buildItem(
+          //                       context, Role.assistant.name, snapshot.data!);
+          //                 } else {
+          //                   return const SizedBox();
+          //                 }
+          //               },
+          //             ),
+          //           )
+          //         : const SizedBox())
+          //     :
+
+          if (index == _messageStore.listMessage.length) {
+            if (_messageStore.responseMessage != null) {
+              return StreamBuilder<String>(
+                stream: _messageStore.responseMessage,
                 builder: (context, snapshot) {
-                  return buildItem(
-                    context,
-                    _messageStore.listMessage.elementAt(index).message?.role ??
-                        Role.assistant.name,
-                    snapshot.data ?? "",
-                  );
-                }),
-        itemCount: _messageStore.listMessage.length,
+                  if (snapshot.connectionState == ConnectionState.active &&
+                      snapshot.hasData &&
+                      snapshot.data != null &&
+                      snapshot.data!.isNotEmpty) {
+                    return buildItem(Role.assistant.name, snapshot.requireData);
+                  } else {
+                    return const SizedBox();
+                  }
+                },
+              );
+            } else {
+              return const SizedBox();
+            }
+          } else {
+            final messageUI = _messageStore.listMessage.elementAt(index);
+            return buildItem(
+              messageUI.message.role,
+              messageUI.message.title,
+            );
+          }
+        },
+        itemCount: _messageStore.listMessage.length + 1,
         controller: ScrollController(),
       ),
     );

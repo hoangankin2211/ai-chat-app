@@ -12,8 +12,8 @@ import 'package:hive/hive.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  OpenAI.apiKey = "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";
-  OpenAI.baseUrl = "https://api.openai.com/v1";
+  OpenAI.apiKey = "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";
+  OpenAI.baseUrl = "https://api.openai.com";
   OpenAI.showLogs = true;
 
   await setPreferredOrientations();

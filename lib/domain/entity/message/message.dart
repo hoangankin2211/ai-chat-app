@@ -11,24 +11,24 @@ part 'message.g.dart';
 @HiveType(typeId: HiveConstant.messageHiveId)
 class Message {
   @HiveField(0)
-  int id;
+  final int id;
 
   @HiveField(1)
-  int threadId;
+  final int threadId;
 
   @HiveField(2)
-  String title;
+  final String title;
 
   @HiveField(3)
-  int createdAt;
+  final int createdAt;
 
   @HiveField(4)
-  int? updatedAt;
+  final int? updatedAt;
 
   @HiveField(6)
-  String role;
+  final String role;
 
-  Message({
+  const Message({
     required this.id,
     required this.threadId,
     required this.title,

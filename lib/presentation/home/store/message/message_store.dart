@@ -45,6 +45,9 @@ abstract class _MessageStore with Store {
   @observable
   bool loadingMessage = false;
 
+  @observable
+  Stream<String>? responseMessage;
+
   @computed
   bool get loading => fetchMessagesFuture.status == FutureStatus.pending;
 
@@ -110,13 +113,28 @@ abstract class _MessageStore with Store {
       MessageUI(
         message: future,
         isLoadingMessage: false,
-        // streamString: sendMessage(future.title),
       ),
-      MessageUI(
-        isLoadingMessage: true,
-        streamString: sendMessage(future.title),
-      )
     ];
+    String result = "";
+    responseMessage = sendMessage(future.title)
+      ..listen((event) {
+        result += event;
+      }).onDone(() {
+        this.listMessage = [
+          ...listMessage,
+          MessageUI(
+            message: Message(
+              id: 0,
+              createdAt: DateTime.now().millisecondsSinceEpoch,
+              threadId: 0,
+              title: result,
+              role: "assistant",
+            ),
+            isLoadingMessage: false,
+          ),
+        ];
+        responseMessage = null;
+      });
   }
 
   Stream<String> sendMessage(String value) {
@@ -130,8 +148,11 @@ abstract class _MessageStore with Store {
       messages: [userMessage],
       n: 2,
     );
-    return chatStream
-        .map((event) => event.choices.map((e) => e.finishReason).join());
+
+    return chatStream.map((event) {
+      String result = event.choices.last.delta.content ?? "";
+      return result;
+    }).distinct();
   }
 
   @action
