@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:chat_app/core/stores/error/error_store.dart';
 import 'package:chat_app/core/stores/form/form_store.dart';
 import 'package:chat_app/domain/repository/setting/setting_repository.dart';
+import 'package:chat_app/domain/usecase/thread/get_thread_usecase.dart';
+import 'package:chat_app/domain/usecase/thread/insert_thread_usecase.dart';
 import 'package:chat_app/presentation/home/store/language/language_store.dart';
 import 'package:chat_app/presentation/home/store/theme/theme_store.dart';
 import 'package:chat_app/presentation/thread/thread/thread_store.dart';
@@ -37,6 +39,8 @@ mixin StoreModule {
     getIt.registerSingleton<ThreadStore>(
       ThreadStore(
         getIt<ErrorStore>(),
+        getIt<GetThreadUseCase>(),
+        getIt<InsertThreadUseCase>(),
       ),
     );
   }

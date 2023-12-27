@@ -1,5 +1,7 @@
 import 'package:another_flushbar/flushbar_helper.dart';
+import 'package:chat_app/core/widgets/progress_indicator_widget.dart';
 import 'package:chat_app/di/service_locator.dart';
+import 'package:chat_app/domain/entity/thread/thread.dart';
 import 'package:chat_app/presentation/thread/thread/thread_store.dart';
 import 'package:chat_app/utils/locale/app_localization.dart';
 import 'package:flutter/material.dart';
@@ -44,114 +46,117 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
   Widget _buildMainContent() {
     return Observer(
       builder: (context) {
-        return
-            // _threadStore.loading
-            //     ? CustomProgressIndicatorWidget()
-            //     :
-            Material(child: _buildListView());
+        return _threadStore.loading
+            ? CustomProgressIndicatorWidget()
+            : Material(child: _buildListView());
       },
     );
   }
 
   Widget _buildListView() {
-    return [].isEmpty
-        ? Padding(
-            padding:
-                const EdgeInsets.only(left: 8, right: 8, bottom: 10, top: 30),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Theme.of(context).colorScheme.onBackground,
-                    hintText: "Search",
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide.none,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    focusColor: Theme.of(context).colorScheme.onBackground,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    prefixIcon: IconButton(
-                      icon: Icon(Icons.search),
-                      onPressed: () {
-                        // _threadStore.searchPost(_searchController.text);
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: [].length + 1,
-                    separatorBuilder: (context, position) {
-                      return const SizedBox(height: 10);
-                    },
-                    itemBuilder: (context, position) {
-                      if (position == 0) {
-                        return ListTile(
-                          onTap: () {},
-                          leading: Icon(Icons.edit_note),
-                          title: Text(
-                            'New Chat',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: false,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        );
-                      }
-                      return _buildListItem(position - 1);
-                    },
-                  ),
-                ),
-                Divider(
-                  height: 10,
-                  thickness: 1,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-                ListTile(
-                  leading: CircleAvatar(
-                    child: Icon(
-                      Icons.person,
-                      color: Theme.of(context).cardColor,
-                    ),
-                  ),
-                  onTap: () {},
-                  title: Text(
-                    "Hung InspireUI",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  trailing: Icon(Icons.more_vert),
-                )
-              ],
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, right: 8, bottom: 10, top: 30),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.onBackground,
+              hintText: "Search",
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(25),
+              ),
+              focusColor: Theme.of(context).colorScheme.onBackground,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              prefixIcon: IconButton(
+                icon: Icon(Icons.search),
+                onPressed: () {
+                  // _threadStore.searchPost(_searchController.text);
+                },
+              ),
             ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: ListView.separated(
+              itemCount: _threadStore.threadList?.length ?? 0 + 1,
+              separatorBuilder: (context, position) {
+                return const SizedBox(height: 10);
+              },
+              itemBuilder: (context, position) {
+                if (position == 0) {
+                  return ListTile(
+                    onTap: () {
+                      _threadStore.addThread(title: "new thread created");
+                    },
+                    leading: Icon(Icons.edit_note),
+                    title: Text(
+                      'New Chat',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  );
+                }
+                return _buildListItem(
+                    _threadStore.threadList!.elementAt(position));
+              },
+            ),
+          ),
+          if (_threadStore.threadList?.isEmpty ?? true)
+            Expanded(
+              child: Center(
+                child: Text(
+                  "No Thread Found",
+                ),
+              ),
+            ),
+          const Spacer(),
+          Divider(
+            height: 10,
+            thickness: 1,
+            color: Theme.of(context).colorScheme.onPrimary,
+          ),
+          ListTile(
+            leading: CircleAvatar(
+              child: Icon(
+                Icons.person,
+                color: Theme.of(context).cardColor,
+              ),
+            ),
+            onTap: () {},
+            title: Text(
+              "Hung InspireUI",
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            trailing: Icon(Icons.more_vert),
           )
-        : Center(
-            child: Text(
-              AppLocalizations.of(context).translate('home_tv_no_thread_found'),
-            ),
-          );
+        ],
+      ),
+    );
   }
 
-  Widget _buildListItem(int position) {
+  Widget _buildListItem(Thread thread) {
     return ListTile(
       leading: Icon(Icons.cloud_circle),
       onTap: () {},
       title: Text(
-        '_threadStore.threadList?.threads?[position].title',
+        thread.title ?? "",
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         softWrap: false,
         style: Theme.of(context).textTheme.titleMedium,
       ),
       subtitle: Text(
-        '_threadStore.threadList?.threads?[position].body}',
+        thread.lastMessage ?? "",
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         softWrap: false,

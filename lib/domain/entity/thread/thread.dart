@@ -23,7 +23,6 @@ class Thread extends HiveObject {
 
   @HiveField(5)
   int? lastUpdate;
-
   Thread({
     required this.id,
     required this.createdAt,

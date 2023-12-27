@@ -10,7 +10,7 @@ class GetThreadUseCase extends UseCase<List<Thread>, void> {
   GetThreadUseCase(this._threadRepository);
 
   @override
-  FutureOr<List<Thread>> call({required void params}) {
+  Future<List<Thread>> call({required void params}) {
     try {
       return _threadRepository.getThreads();
     } catch (e) {
