@@ -91,7 +91,11 @@ class _HomeScreenState extends State<HomeScreen> {
   // app bar methods:-----------------------------------------------------------
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: Text("Message"),
+      title: Observer(
+        builder: (context) => Text(
+          _messageStore.thread?.title ?? "ChatGPT",
+        ),
+      ),
       actions: _buildActions(),
     );
   }
@@ -100,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return <Widget>[
       _buildReloadButton(),
       _buildNewChatButton(),
-      _buildLanguageButton(),
+      // _buildLanguageButton(),
       _buildThemeButton(),
     ];
   }
@@ -155,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget buildItem(String sender, String message) {
+  Widget buildItem(String sender, String message, {bool isLoading = false}) {
     return InkWell(
       onTap: () {},
       child: Container(
@@ -187,7 +191,15 @@ class _HomeScreenState extends State<HomeScreen> {
             Flexible(
               child: Padding(
                 padding: const EdgeInsets.only(left: 45),
-                child: Text(message),
+                child: isLoading
+                    ? SizedBox(
+                        width: 10,
+                        height: 10,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(message),
               ),
             )
           ],
@@ -209,7 +221,13 @@ class _HomeScreenState extends State<HomeScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: List.generate(listMessage.length + 1, (index) {
             if (index == 0) {
-              if (isResponding) {
+              if (_messageStore.isWaitingMessageResponse) {
+                return buildItem(
+                  Role.assistant.name,
+                  "",
+                  isLoading: true,
+                );
+              } else if (isResponding) {
                 return Observer(
                   name: "responseMessage",
                   builder: (context) {

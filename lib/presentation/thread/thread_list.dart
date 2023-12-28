@@ -21,14 +21,9 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
-  void initState() {
-    _threadStore.getThreads();
-    super.initState();
-  }
-
-  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _threadStore.getThreads();
 
     // check to see if already called api
     // if (!_threadStore.loading) {
@@ -66,28 +61,28 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
       padding: const EdgeInsets.only(left: 8, right: 8, bottom: 10, top: 30),
       child: Column(
         children: [
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Theme.of(context).colorScheme.onBackground,
-              hintText: "Search",
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide.none,
-                borderRadius: BorderRadius.circular(25),
-              ),
-              focusColor: Theme.of(context).colorScheme.onBackground,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-              prefixIcon: IconButton(
-                icon: Icon(Icons.search),
-                onPressed: () {
-                  // _threadStore.searchPost(_searchController.text);
-                },
-              ),
-            ),
-          ),
+          // TextField(
+          //   controller: _searchController,
+          //   decoration: InputDecoration(
+          //     filled: true,
+          //     fillColor: Theme.of(context).colorScheme.onBackground,
+          //     hintText: "Search",
+          //     enabledBorder: OutlineInputBorder(
+          //       borderSide: BorderSide.none,
+          //       borderRadius: BorderRadius.circular(25),
+          //     ),
+          //     focusColor: Theme.of(context).colorScheme.onBackground,
+          //     border: OutlineInputBorder(
+          //       borderRadius: BorderRadius.circular(25),
+          //     ),
+          //     prefixIcon: IconButton(
+          //       icon: Icon(Icons.search),
+          //       onPressed: () {
+          //         // _threadStore.searchPost(_searchController.text);
+          //       },
+          //     ),
+          //   ),
+          // ),
           const SizedBox(height: 10),
           Expanded(
             child: RefreshIndicator(
@@ -97,7 +92,7 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
               child: _threadStore.isLoading
                   ? CustomProgressIndicatorWidget()
                   : ListView.separated(
-                      itemCount: _threadStore.threadList?.length ?? 0 + 1,
+                      itemCount: (_threadStore.threadList?.length ?? 0) + 1,
                       separatorBuilder: (context, position) {
                         return const SizedBox(height: 10);
                       },
@@ -119,7 +114,7 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
                           );
                         }
                         return _buildListItem(
-                            _threadStore.threadList!.elementAt(position));
+                            _threadStore.threadList!.elementAt(position - 1));
                       },
                     ),
             ),
@@ -138,7 +133,6 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
                 color: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
-            onTap: () {},
             title: Text(
               "Hoang Truong",
               maxLines: 1,
@@ -155,8 +149,8 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
   Widget _buildListItem(Thread thread) {
     return ListTile(
       onTap: () async {
-        _threadStore.changeThread(thread: thread);
         Scaffold.of(context).closeDrawer();
+        await _threadStore.changeThread(thread: thread);
       },
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),

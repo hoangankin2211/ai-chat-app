@@ -42,6 +42,9 @@ abstract class _MessageStore with Store {
   bool loadingMessage = false;
 
   @observable
+  bool isWaitingMessageResponse = false;
+
+  @observable
   ObservableMap<int, Message> responseMessageMap = ObservableMap();
 
   @computed
@@ -56,22 +59,28 @@ abstract class _MessageStore with Store {
       ObservableFuture<List<Message>>(emptyMessageResponse);
 
   @computed
-  Message? get getResponseMessage => responseMessageMap[thread?.id];
+  Message? get getResponseMessage =>
+      this.thread != null ? responseMessageMap[this.thread!.id!] : null;
 
   // actions:-------------------------------------------------------------------
 
   @action
   Future<void> changeThread({Thread? thread}) async {
-    if (this.thread == null && thread == null) return;
-    if (this.thread != null && thread == null) {
-      listMessage.clear();
-      this.thread = null;
+    print("this.thread!.id :${this.thread?.id}");
+    print("thread.id :${thread?.id}");
+
+    if (this.thread == null && thread == null) {
+      this.listMessage.clear();
       return;
-    }
-    if (this.thread != null && thread != null && this.thread!.id == thread.id) {
+    } else if (this.thread == null && thread != null) {
+      this.thread = thread;
+    } else if (this.thread != null && thread == null) {
+      this.thread = null;
+      this.listMessage.clear();
       return;
     }
 
+    responseMessageMap.remove(this.thread!.id!);
     this.thread = thread;
     getMessages();
   }
@@ -79,24 +88,33 @@ abstract class _MessageStore with Store {
   @action
   Future getMessages() async {
     if (thread == null) {
-      this.thread = await _insertThreadUseCase.call(
-        params: Thread(
-          id: 0,
-          createdAt: DateTime.now().millisecondsSinceEpoch,
-        ),
-      );
+      // this.thread = await _insertThreadUseCase.call(
+      //   params: Thread(
+      //     createdAt: DateTime.now().millisecondsSinceEpoch,
+      //   ),
+      // );
+
+      return;
     }
+
     loadingMessage = true;
 
     await Future.delayed(Duration(milliseconds: 150));
 
-    final future = _getThreadMessageUseCase.call(params: thread!.id);
+    final future = thread!.id != null
+        ? _getThreadMessageUseCase.call(params: thread!.id!)
+        : Future.value([] as List<Message>);
 
     fetchMessagesFuture = ObservableFuture(future.then((value) => value ?? []));
 
     future.then((messageList) {
       this.listMessage.clear();
-      this.listMessage.addAll(messageList ?? []);
+      this.listMessage.addAll((messageList ?? [])
+        ..sort(
+          (a, b) {
+            return a.createdAt.compareTo(b.createdAt);
+          },
+        ));
     }).catchError((error) {
       errorStore.errorMessage = error.toString();
     });
@@ -109,16 +127,15 @@ abstract class _MessageStore with Store {
     if (thread == null) {
       this.thread = await _insertThreadUseCase.call(
         params: Thread(
-          id: 0,
           createdAt: DateTime.now().millisecondsSinceEpoch,
+          title: message,
         ),
       );
     }
 
     final future = await _addNewMessageUseCase.call(
       params: Message(
-        id: 0,
-        threadId: thread!.id,
+        threadId: thread!.id!,
         title: message,
         createdAt: DateTime.now().millisecondsSinceEpoch,
         role: role.name,
@@ -127,11 +144,37 @@ abstract class _MessageStore with Store {
 
     _addToMessageList(future);
 
-    createOpenAiStream(future.title).listen(_updateResponseMessage).onDone(
+    isWaitingMessageResponse = true;
+
+    final aiResponse = await createOpenAI(future.title);
+    final threadId = thread!.id!;
+    final _role = Role.assistant.name;
+    final createTime = DateTime.now().millisecondsSinceEpoch;
+
+    isWaitingMessageResponse = false;
+
+    responseMessageMap.addAll({
+      thread!.id!: Message(
+        createdAt: createTime,
+        threadId: threadId,
+        title: "",
+        role: _role,
+      )
+    });
+
+    createStream(aiResponse).listen(_updateResponseMessage).onDone(
       () async {
-        final responseMessage = responseMessageMap[thread!.id];
         _addToMessageList(
-            await _addNewMessageUseCase.call(params: responseMessage!));
+          await _addNewMessageUseCase.call(
+            params: Message(
+              createdAt: createTime,
+              threadId: threadId,
+              title: aiResponse,
+              role: _role,
+            ),
+          ),
+        );
+
         responseMessageMap.remove(thread!.id);
       },
     );
@@ -148,20 +191,44 @@ abstract class _MessageStore with Store {
 
     if (responseMessage != null) {
       responseMessageMap.addAll({
-        thread!.id: responseMessage.copyWith(
+        thread!.id!: responseMessage.copyWith(
           title: responseMessage.title + event,
         )
       });
-    } else {
-      responseMessageMap.addAll({
-        thread!.id: Message(
-          id: 0,
-          createdAt: DateTime.now().millisecondsSinceEpoch,
-          threadId: thread!.id,
-          title: event,
-          role: Role.assistant.name,
-        )
-      });
+    }
+  }
+
+  Future<String> createOpenAI(String value) async {
+    final userMessage = OpenAIChatCompletionChoiceMessageModel(
+      role: OpenAIChatMessageRole.user,
+      content: value,
+    );
+
+    final messageResponse = await OpenAI.instance.chat.create(
+      model: "gpt-3.5-turbo",
+      messages: [
+        ...listMessage.map(
+          (element) => OpenAIChatCompletionChoiceMessageModel(
+            role: element.role == Role.assistant.name
+                ? OpenAIChatMessageRole.assistant
+                : OpenAIChatMessageRole.user,
+            content: element.title,
+          ),
+        ),
+        userMessage
+      ],
+    );
+
+    print(messageResponse.choices);
+
+    return messageResponse.choices.first.message.content;
+  }
+
+  Stream<String> createStream(String value) async* {
+    List<String> character = value.split('');
+    for (int i = 0; i < character.length; i++) {
+      await Future.delayed(Duration(milliseconds: 50));
+      yield character[i];
     }
   }
 

@@ -7,7 +7,7 @@ part 'thread.g.dart';
 @HiveType(typeId: HiveConstant.threadHiveId)
 class Thread extends HiveObject {
   @HiveField(0)
-  int id;
+  int? id;
 
   @HiveField(1)
   int createdAt;
@@ -24,7 +24,7 @@ class Thread extends HiveObject {
   @HiveField(5)
   int? lastUpdate;
   Thread({
-    required this.id,
+    this.id,
     required this.createdAt,
     this.header,
     this.title,

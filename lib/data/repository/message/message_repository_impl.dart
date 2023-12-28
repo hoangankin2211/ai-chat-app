@@ -59,7 +59,7 @@ class MessageRepositoryImpl implements MessageRepository {
   Future<Message> updateMessage(Message message) async {
     try {
       _messageDataSource.updateMessage(message);
-      return (await getMessage(message.id))!;
+      return (await getMessage(message.id!))!;
     } catch (e) {
       throw e;
     }

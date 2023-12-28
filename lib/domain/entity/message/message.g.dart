@@ -17,7 +17,7 @@ class MessageAdapter extends TypeAdapter<Message> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Message(
-      id: fields[0] as int,
+      id: fields[0] as int?,
       threadId: fields[1] as int,
       title: fields[2] as String,
       createdAt: fields[3] as int,

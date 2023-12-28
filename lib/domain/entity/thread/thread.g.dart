@@ -17,7 +17,7 @@ class ThreadAdapter extends TypeAdapter<Thread> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Thread(
-      id: fields[0] as int,
+      id: fields[0] as int?,
       createdAt: fields[1] as int,
       header: fields[2] as String?,
       title: fields[3] as String?,

@@ -94,6 +94,23 @@ mixin _$MessageStore on _MessageStore, Store {
     });
   }
 
+  late final _$isWaitingMessageResponseAtom =
+      Atom(name: '_MessageStore.isWaitingMessageResponse', context: context);
+
+  @override
+  bool get isWaitingMessageResponse {
+    _$isWaitingMessageResponseAtom.reportRead();
+    return super.isWaitingMessageResponse;
+  }
+
+  @override
+  set isWaitingMessageResponse(bool value) {
+    _$isWaitingMessageResponseAtom
+        .reportWrite(value, super.isWaitingMessageResponse, () {
+      super.isWaitingMessageResponse = value;
+    });
+  }
+
   late final _$responseMessageMapAtom =
       Atom(name: '_MessageStore.responseMessageMap', context: context);
 
@@ -184,6 +201,7 @@ listMessage: ${listMessage},
 thread: ${thread},
 success: ${success},
 loadingMessage: ${loadingMessage},
+isWaitingMessageResponse: ${isWaitingMessageResponse},
 responseMessageMap: ${responseMessageMap},
 fetchMessagesFuture: ${fetchMessagesFuture},
 loading: ${loading},

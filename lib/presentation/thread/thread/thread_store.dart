@@ -53,11 +53,18 @@ abstract class _ThreadStore with Store {
   @action
   Future getThreads() async {
     isLoading = true;
+    await Future.delayed(const Duration(milliseconds: 200));
     final future = _getThreadUseCase.call(params: null);
     fetchThreadsFuture = ObservableFuture(future);
     future.then((threadList) {
+      print(threadList.length);
+
       this.threadList = threadList
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      this.threadList!.forEach((element) {
+        print("this.threadList: " + element.title.toString());
+      });
     }).catchError((error) {
       errorStore.errorMessage = DioErrorUtil.handleError(error);
     });
@@ -84,6 +91,6 @@ abstract class _ThreadStore with Store {
   @action
   Future<void> changeThread({Thread? thread}) async {
     selectedThread = thread;
-    await _messageStore.changeThread(thread: thread);
+    await _messageStore.changeThread(thread: selectedThread);
   }
 }
