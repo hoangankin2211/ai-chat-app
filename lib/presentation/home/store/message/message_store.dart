@@ -5,9 +5,7 @@ import 'package:chat_app/domain/entity/thread/thread.dart';
 import 'package:chat_app/domain/usecase/message/add_new_message_usecase.dart';
 import 'package:chat_app/domain/usecase/message/get_thread_message_usecase.dart';
 import 'package:chat_app/domain/usecase/thread/insert_thread_usecase.dart';
-import 'package:chat_app/presentation/home/store/message/message_ui.dart';
 import 'package:dart_openai/dart_openai.dart';
-import 'package:hive/hive.dart';
 import 'package:mobx/mobx.dart';
 
 part 'message_store.g.dart';
@@ -26,15 +24,13 @@ abstract class _MessageStore with Store {
     this._getThreadMessageUseCase,
     this.errorStore,
     this._insertThreadUseCase,
-  ) {
-    init();
-  }
+  ) {}
 
   static ObservableFuture<List<Message>> emptyMessageResponse =
       ObservableFuture.value([]);
 
   @observable
-  List<MessageUI> listMessage = [];
+  ObservableList<Message> listMessage = ObservableList();
 
   @observable
   Thread? thread;
@@ -46,7 +42,7 @@ abstract class _MessageStore with Store {
   bool loadingMessage = false;
 
   @observable
-  Stream<String>? responseMessage;
+  ObservableMap<int, Message> responseMessageMap = ObservableMap();
 
   @computed
   bool get loading => fetchMessagesFuture.status == FutureStatus.pending;
@@ -59,7 +55,25 @@ abstract class _MessageStore with Store {
   ObservableFuture<List<Message>> fetchMessagesFuture =
       ObservableFuture<List<Message>>(emptyMessageResponse);
 
+  @computed
+  Message? get getResponseMessage => responseMessageMap[thread?.id];
+
   // actions:-------------------------------------------------------------------
+
+  @action
+  Future<void> changeThread({Thread? thread}) async {
+    if (this.thread != null && thread == null) {
+      listMessage.clear();
+      this.thread = null;
+      return;
+    }
+    if (this.thread != null && thread != null && this.thread!.id == thread.id) {
+      return;
+    }
+
+    this.thread = thread;
+    getMessages();
+  }
 
   @action
   Future getMessages() async {
@@ -71,25 +85,26 @@ abstract class _MessageStore with Store {
         ),
       );
     }
+    loadingMessage = true;
+
+    await Future.delayed(Duration(milliseconds: 150));
+
     final future = _getThreadMessageUseCase.call(params: thread!.id);
-    fetchMessagesFuture = ObservableFuture(future.then((value) {
-      if (value != null) return value;
-      return [];
-    }));
+
+    fetchMessagesFuture = ObservableFuture(future.then((value) => value ?? []));
 
     future.then((messageList) {
-      this.listMessage = (messageList ?? [])
-          .map(
-            (e) => MessageUI(message: e),
-          )
-          .toList();
+      this.listMessage.clear();
+      this.listMessage.addAll(messageList ?? []);
     }).catchError((error) {
       errorStore.errorMessage = error.toString();
     });
+
+    loadingMessage = false;
   }
 
   @action
-  Future addMessage({required String message, required Role role}) async {
+  Future sendMessage({required String message, required Role role}) async {
     if (thread == null) {
       this.thread = await _insertThreadUseCase.call(
         params: Thread(
@@ -108,36 +123,48 @@ abstract class _MessageStore with Store {
         role: role.name,
       ),
     );
-    this.listMessage = [
-      ...listMessage,
-      MessageUI(
-        message: future,
-        isLoadingMessage: false,
-      ),
-    ];
-    String result = "";
-    responseMessage = sendMessage(future.title)
-      ..listen((event) {
-        result += event;
-      }).onDone(() {
-        this.listMessage = [
-          ...listMessage,
-          MessageUI(
-            message: Message(
-              id: 0,
-              createdAt: DateTime.now().millisecondsSinceEpoch,
-              threadId: 0,
-              title: result,
-              role: "assistant",
-            ),
-            isLoadingMessage: false,
-          ),
-        ];
-        responseMessage = null;
-      });
+
+    _addToMessageList(future);
+
+    createOpenAiStream(future.title).listen(_updateResponseMessage).onDone(
+      () async {
+        final responseMessage = responseMessageMap[thread!.id];
+        _addToMessageList(
+            await _addNewMessageUseCase.call(params: responseMessage!));
+        responseMessageMap.remove(thread!.id);
+      },
+    );
   }
 
-  Stream<String> sendMessage(String value) {
+  @action
+  void _addToMessageList(Message newMessage) {
+    this.listMessage.add(newMessage);
+  }
+
+  @action
+  void _updateResponseMessage(String event) {
+    final responseMessage = responseMessageMap[thread!.id];
+
+    if (responseMessage != null) {
+      responseMessageMap.addAll({
+        thread!.id: responseMessage.copyWith(
+          title: responseMessage.title + event,
+        )
+      });
+    } else {
+      responseMessageMap.addAll({
+        thread!.id: Message(
+          id: 0,
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+          threadId: thread!.id,
+          title: event,
+          role: Role.assistant.name,
+        )
+      });
+    }
+  }
+
+  Stream<String> createOpenAiStream(String value) {
     // The user message to be sent to the request.
     final userMessage = OpenAIChatCompletionChoiceMessageModel(
       content: value,
@@ -149,35 +176,22 @@ abstract class _MessageStore with Store {
       n: 2,
     );
 
-    return chatStream.map((event) {
-      String result = event.choices.last.delta.content ?? "";
-      return result;
-    }).distinct();
+    return chatStream
+        .map((event) {
+          String result = event.choices.last.delta.content ?? "";
+          return result;
+        })
+        .distinct()
+        .asyncExpand((event) async* {
+          await Future.delayed(const Duration(milliseconds: 100));
+          yield event;
+        });
   }
-
-  @action
-  List<Thread> getAllThread() {
-    return Hive.box<Thread>('thread').values.toList();
-  }
-
-  @action
-  Future<void> addThread(Thread thread) async {
-    await Hive.box<Thread>('thread').add(thread);
-  }
-
-  List<String> getAllMessage() {
-    return [];
-  }
-
-  @action
-  List<OpenAIChatCompletionChoiceMessageModel> getMessage() {
-    //  OpenAI.instance.chat.
-    return [];
-  }
-
-  // general:-------------------------------------------------------------------
-  void init() async {}
 
   // dispose:-------------------------------------------------------------------
-  dispose() {}
+  dispose() {
+    thread = null;
+    success = false;
+    loadingMessage = false;
+  }
 }

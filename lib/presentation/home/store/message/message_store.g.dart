@@ -22,18 +22,25 @@ mixin _$MessageStore on _MessageStore, Store {
           () => super.addMessageSuccess,
           name: '_MessageStore.addMessageSuccess'))
       .value;
+  Computed<Message?>? _$getResponseMessageComputed;
+
+  @override
+  Message? get getResponseMessage => (_$getResponseMessageComputed ??=
+          Computed<Message?>(() => super.getResponseMessage,
+              name: '_MessageStore.getResponseMessage'))
+      .value;
 
   late final _$listMessageAtom =
       Atom(name: '_MessageStore.listMessage', context: context);
 
   @override
-  List<MessageUI> get listMessage {
+  ObservableList<Message> get listMessage {
     _$listMessageAtom.reportRead();
     return super.listMessage;
   }
 
   @override
-  set listMessage(List<MessageUI> value) {
+  set listMessage(ObservableList<Message> value) {
     _$listMessageAtom.reportWrite(value, super.listMessage, () {
       super.listMessage = value;
     });
@@ -87,6 +94,22 @@ mixin _$MessageStore on _MessageStore, Store {
     });
   }
 
+  late final _$responseMessageMapAtom =
+      Atom(name: '_MessageStore.responseMessageMap', context: context);
+
+  @override
+  ObservableMap<int, Message> get responseMessageMap {
+    _$responseMessageMapAtom.reportRead();
+    return super.responseMessageMap;
+  }
+
+  @override
+  set responseMessageMap(ObservableMap<int, Message> value) {
+    _$responseMessageMapAtom.reportWrite(value, super.responseMessageMap, () {
+      super.responseMessageMap = value;
+    });
+  }
+
   late final _$fetchMessagesFutureAtom =
       Atom(name: '_MessageStore.fetchMessagesFuture', context: context);
 
@@ -103,6 +126,15 @@ mixin _$MessageStore on _MessageStore, Store {
     });
   }
 
+  late final _$changeThreadAsyncAction =
+      AsyncAction('_MessageStore.changeThread', context: context);
+
+  @override
+  Future<void> changeThread({Thread? thread}) {
+    return _$changeThreadAsyncAction
+        .run(() => super.changeThread(thread: thread));
+  }
+
   late final _$getMessagesAsyncAction =
       AsyncAction('_MessageStore.getMessages', context: context);
 
@@ -111,43 +143,35 @@ mixin _$MessageStore on _MessageStore, Store {
     return _$getMessagesAsyncAction.run(() => super.getMessages());
   }
 
-  late final _$addMessageAsyncAction =
-      AsyncAction('_MessageStore.addMessage', context: context);
+  late final _$sendMessageAsyncAction =
+      AsyncAction('_MessageStore.sendMessage', context: context);
 
   @override
-  Future<dynamic> addMessage({required String message, required Role role}) {
-    return _$addMessageAsyncAction
-        .run(() => super.addMessage(message: message, role: role));
-  }
-
-  late final _$addThreadAsyncAction =
-      AsyncAction('_MessageStore.addThread', context: context);
-
-  @override
-  Future<void> addThread(Thread thread) {
-    return _$addThreadAsyncAction.run(() => super.addThread(thread));
+  Future<dynamic> sendMessage({required String message, required Role role}) {
+    return _$sendMessageAsyncAction
+        .run(() => super.sendMessage(message: message, role: role));
   }
 
   late final _$_MessageStoreActionController =
       ActionController(name: '_MessageStore', context: context);
 
   @override
-  List<Thread> getAllThread() {
+  void _addToMessageList(Message newMessage) {
     final _$actionInfo = _$_MessageStoreActionController.startAction(
-        name: '_MessageStore.getAllThread');
+        name: '_MessageStore._addToMessageList');
     try {
-      return super.getAllThread();
+      return super._addToMessageList(newMessage);
     } finally {
       _$_MessageStoreActionController.endAction(_$actionInfo);
     }
   }
 
   @override
-  List<OpenAIChatCompletionChoiceMessageModel> getMessage() {
+  void _updateResponseMessage(String event) {
     final _$actionInfo = _$_MessageStoreActionController.startAction(
-        name: '_MessageStore.getMessage');
+        name: '_MessageStore._updateResponseMessage');
     try {
-      return super.getMessage();
+      return super._updateResponseMessage(event);
     } finally {
       _$_MessageStoreActionController.endAction(_$actionInfo);
     }
@@ -160,9 +184,11 @@ listMessage: ${listMessage},
 thread: ${thread},
 success: ${success},
 loadingMessage: ${loadingMessage},
+responseMessageMap: ${responseMessageMap},
 fetchMessagesFuture: ${fetchMessagesFuture},
 loading: ${loading},
-addMessageSuccess: ${addMessageSuccess}
+addMessageSuccess: ${addMessageSuccess},
+getResponseMessage: ${getResponseMessage}
     ''';
   }
 }

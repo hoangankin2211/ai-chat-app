@@ -2,10 +2,12 @@ import 'package:another_flushbar/flushbar_helper.dart';
 import 'package:chat_app/core/widgets/progress_indicator_widget.dart';
 import 'package:chat_app/di/service_locator.dart';
 import 'package:chat_app/domain/entity/thread/thread.dart';
+import 'package:chat_app/presentation/home/store/message/message_store.dart';
 import 'package:chat_app/presentation/thread/thread/thread_store.dart';
 import 'package:chat_app/utils/locale/app_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:intl/intl.dart';
 
 class ThreadListScreen extends StatefulWidget {
   @override
@@ -17,6 +19,12 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
   final ThreadStore _threadStore = getIt<ThreadStore>();
 
   final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    _threadStore.getThreads();
+    super.initState();
+  }
 
   @override
   void didChangeDependencies() {
@@ -46,7 +54,7 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
   Widget _buildMainContent() {
     return Observer(
       builder: (context) {
-        return _threadStore.loading
+        return _threadStore.loading || _threadStore.isLoading
             ? CustomProgressIndicatorWidget()
             : Material(child: _buildListView());
       },
@@ -82,35 +90,42 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
           ),
           const SizedBox(height: 10),
           Expanded(
-            child: ListView.separated(
-              itemCount: _threadStore.threadList?.length ?? 0 + 1,
-              separatorBuilder: (context, position) {
-                return const SizedBox(height: 10);
+            child: RefreshIndicator(
+              onRefresh: () {
+                return _threadStore.getThreads();
               },
-              itemBuilder: (context, position) {
-                if (position == 0) {
-                  return ListTile(
-                    onTap: () {
-                      _threadStore.addThread(title: "new thread created");
-                    },
-                    leading: Icon(Icons.edit_note),
-                    title: Text(
-                      'New Chat',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      softWrap: false,
-                      style: Theme.of(context).textTheme.titleMedium,
+              child: _threadStore.isLoading
+                  ? CustomProgressIndicatorWidget()
+                  : ListView.separated(
+                      itemCount: _threadStore.threadList?.length ?? 0 + 1,
+                      separatorBuilder: (context, position) {
+                        return const SizedBox(height: 10);
+                      },
+                      itemBuilder: (context, position) {
+                        if (position == 0) {
+                          return ListTile(
+                            onTap: () async {
+                              await _threadStore.changeThread();
+                              Scaffold.of(context).closeDrawer();
+                            },
+                            leading: Icon(Icons.edit_note),
+                            title: Text(
+                              'New Chat',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          );
+                        }
+                        return _buildListItem(
+                            _threadStore.threadList!.elementAt(position));
+                      },
                     ),
-                  );
-                }
-                return _buildListItem(
-                    _threadStore.threadList!.elementAt(position));
-              },
             ),
           ),
           if (_threadStore.threadList?.isEmpty ?? true)
             Expanded(child: Center(child: Text("No Thread Found"))),
-          const Spacer(),
           Divider(
             height: 10,
             thickness: 1,
@@ -120,18 +135,17 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
             leading: CircleAvatar(
               child: Icon(
                 Icons.person,
-                color: Theme.of(context).cardColor,
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
             onTap: () {},
             title: Text(
-              "Hung InspireUI",
+              "Hoang Truong",
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               softWrap: false,
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            trailing: Icon(Icons.more_vert),
           )
         ],
       ),
@@ -140,20 +154,33 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
 
   Widget _buildListItem(Thread thread) {
     return ListTile(
-      leading: Icon(Icons.cloud_circle),
-      onTap: () {},
+      onTap: () async {
+        _threadStore.changeThread(thread: thread);
+        Scaffold.of(context).closeDrawer();
+      },
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      tileColor: _threadStore.selectedThread?.id == thread.id
+          ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+          : null,
       title: Text(
         thread.title ?? "",
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         softWrap: false,
-        style: Theme.of(context).textTheme.titleMedium,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(),
       ),
       subtitle: Text(
-        thread.lastMessage ?? "",
+        DateFormat("dd/MM/yyyy hh:mm a").format(
+          DateTime.fromMillisecondsSinceEpoch(thread.createdAt),
+        ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         softWrap: false,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Theme.of(context).hintColor,
+            ),
       ),
     );
   }
@@ -164,7 +191,6 @@ class _ThreadListScreenState extends State<ThreadListScreen> {
         if (_threadStore.errorStore.errorMessage.isNotEmpty) {
           return _showErrorMessage(_threadStore.errorStore.errorMessage);
         }
-
         return SizedBox.shrink();
       },
     );

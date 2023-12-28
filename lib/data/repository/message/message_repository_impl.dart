@@ -47,8 +47,9 @@ class MessageRepositoryImpl implements MessageRepository {
   Future<Message> insertMessage(Message message) async {
     try {
       int id = await _messageDataSource.insertMessage(message);
-      _messageDataSource.updateMessage(message.copyWith(id: id));
-      return Future.value(message.copyWith(id: id));
+      final messageWithId = message.copyWith(id: id);
+      _messageDataSource.updateMessage(messageWithId);
+      return Future.value(messageWithId);
     } catch (e) {
       throw e;
     }

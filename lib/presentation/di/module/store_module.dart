@@ -39,20 +39,21 @@ mixin StoreModule {
       ),
     );
 
-    getIt.registerSingleton<ThreadStore>(
-      ThreadStore(
-        getIt<ErrorStore>(),
-        getIt<GetThreadUseCase>(),
-        getIt<InsertThreadUseCase>(),
-      ),
-    );
-
     getIt.registerSingleton<MessageStore>(
       MessageStore(
         getIt<AddNewMessageUseCase>(),
         getIt<GetThreadMessageUseCase>(),
         getIt<ErrorStore>(),
         getIt<InsertThreadUseCase>(),
+      ),
+    );
+
+    getIt.registerSingleton<ThreadStore>(
+      ThreadStore(
+        getIt<ErrorStore>(),
+        getIt<GetThreadUseCase>(),
+        getIt<InsertThreadUseCase>(),
+        getIt<MessageStore>(),
       ),
     );
   }

@@ -23,6 +23,22 @@ mixin _$ThreadStore on _ThreadStore, Store {
           name: '_ThreadStore.addThreadSuccess'))
       .value;
 
+  late final _$selectedThreadAtom =
+      Atom(name: '_ThreadStore.selectedThread', context: context);
+
+  @override
+  Thread? get selectedThread {
+    _$selectedThreadAtom.reportRead();
+    return super.selectedThread;
+  }
+
+  @override
+  set selectedThread(Thread? value) {
+    _$selectedThreadAtom.reportWrite(value, super.selectedThread, () {
+      super.selectedThread = value;
+    });
+  }
+
   late final _$fetchThreadsFutureAtom =
       Atom(name: '_ThreadStore.fetchThreadsFuture', context: context);
 
@@ -87,6 +103,22 @@ mixin _$ThreadStore on _ThreadStore, Store {
     });
   }
 
+  late final _$isLoadingAtom =
+      Atom(name: '_ThreadStore.isLoading', context: context);
+
+  @override
+  bool get isLoading {
+    _$isLoadingAtom.reportRead();
+    return super.isLoading;
+  }
+
+  @override
+  set isLoading(bool value) {
+    _$isLoadingAtom.reportWrite(value, super.isLoading, () {
+      super.isLoading = value;
+    });
+  }
+
   late final _$getThreadsAsyncAction =
       AsyncAction('_ThreadStore.getThreads', context: context);
 
@@ -99,17 +131,28 @@ mixin _$ThreadStore on _ThreadStore, Store {
       AsyncAction('_ThreadStore.addThread', context: context);
 
   @override
-  Future<dynamic> addThread({required String title}) {
+  Future<dynamic> addThread({String title = "Untitled"}) {
     return _$addThreadAsyncAction.run(() => super.addThread(title: title));
+  }
+
+  late final _$changeThreadAsyncAction =
+      AsyncAction('_ThreadStore.changeThread', context: context);
+
+  @override
+  Future<void> changeThread({Thread? thread}) {
+    return _$changeThreadAsyncAction
+        .run(() => super.changeThread(thread: thread));
   }
 
   @override
   String toString() {
     return '''
+selectedThread: ${selectedThread},
 fetchThreadsFuture: ${fetchThreadsFuture},
 addThreadFuture: ${addThreadFuture},
 threadList: ${threadList},
 success: ${success},
+isLoading: ${isLoading},
 loading: ${loading},
 addThreadSuccess: ${addThreadSuccess}
     ''';

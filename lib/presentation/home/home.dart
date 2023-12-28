@@ -1,7 +1,5 @@
-import 'dart:async';
-
+import 'package:chat_app/core/widgets/progress_indicator_widget.dart';
 import 'package:chat_app/di/service_locator.dart';
-import 'package:chat_app/domain/entity/message/message.dart';
 import 'package:chat_app/domain/entity/message/role.dart';
 import 'package:chat_app/presentation/home/store/language/language_store.dart';
 import 'package:chat_app/presentation/home/store/message/message_store.dart';
@@ -10,6 +8,7 @@ import 'package:chat_app/presentation/thread/thread_list.dart';
 import 'package:chat_app/utils/locale/app_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:material_dialog/material_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -22,13 +21,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final MessageStore _messageStore = getIt<MessageStore>();
   final ThemeStore _themeStore = getIt<ThemeStore>();
   final LanguageStore _languageStore = getIt<LanguageStore>();
-  // final StreamController<Message> _streamController =
-  //     StreamController.broadcast();
-  // late final Stream<Message> _messageStream;
-  late List<Message> listMessage;
+
   @override
   void initState() {
-    // _messageStream = _streamController.stream.asBroadcastStream();
     _messageStore.getMessages();
     super.initState();
   }
@@ -37,38 +32,58 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: Drawer(
-        elevation: 5,
-        width: MediaQuery.of(context).size.width * 0.85,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-          topRight: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        )),
-        child: ThreadListScreen(),
-      ),
-      appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          Flexible(child: buildListMessage()),
-          InputWidget(
-            isListening: false,
-            micAvailable: true,
-            onSubmitted: () {
-              // _streamController.add();
-              if (_textEditingController.text.isNotEmpty) {
-                _messageStore.addMessage(
-                    message: _textEditingController.value.text,
-                    role: Role.user);
-                _textEditingController.clear();
-              }
-            },
-            onVoiceStart: () {},
-            onVoiceStop: () {},
-            textEditingController: _textEditingController,
-          ),
-        ],
+    return Observer(
+      builder: (context) => Scaffold(
+        drawer: Drawer(
+          elevation: 5,
+          width: MediaQuery.of(context).size.width * 0.85,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+            topRight: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          )),
+          child: ThreadListScreen(),
+        ),
+        appBar: _buildAppBar(),
+        body: _messageStore.loadingMessage
+            ? CustomProgressIndicatorWidget()
+            : Column(
+                children: [
+                  Expanded(
+                    child: _messageStore.listMessage.isEmpty
+                        ? CircleAvatar(
+                            radius: 35,
+                            backgroundColor: Theme.of(context).cardColor,
+                            child: SvgPicture.asset(
+                              "assets/icons/chatgpt-icon.svg",
+                              allowDrawingOutsideViewBox: true,
+                              height: 35,
+                              theme: SvgTheme(
+                                  currentColor:
+                                      Theme.of(context).colorScheme.onPrimary),
+                            ),
+                          )
+                        : buildListMessage(),
+                  ),
+                  InputWidget(
+                    isListening: false,
+                    micAvailable: true,
+                    onSubmitted: () {
+                      // _streamController.add();
+                      if (_textEditingController.text.isNotEmpty) {
+                        _messageStore.sendMessage(
+                          message: _textEditingController.value.text,
+                          role: Role.user,
+                        );
+                        _textEditingController.clear();
+                      }
+                    },
+                    onVoiceStart: () {},
+                    onVoiceStop: () {},
+                    textEditingController: _textEditingController,
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -83,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _buildActions() {
     return <Widget>[
+      _buildReloadButton(),
       _buildNewChatButton(),
       _buildLanguageButton(),
       _buildThemeButton(),
@@ -95,6 +111,19 @@ class _HomeScreenState extends State<HomeScreen> {
         return IconButton(
           onPressed: () {},
           icon: Icon(Icons.edit_document),
+        );
+      },
+    );
+  }
+
+  Widget _buildReloadButton() {
+    return Observer(
+      builder: (context) {
+        return IconButton(
+          onPressed: () {
+            _messageStore.getMessages();
+          },
+          icon: Icon(Icons.refresh),
         );
       },
     );
@@ -138,8 +167,18 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundImage: NetworkImage(
-                      'https://www.pngitem.com/pimgs/m/146-1468479_my-profile-icon-blank-profile-picture-circle-hd.png'),
+                  radius: 20,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: sender == Role.user.name
+                      ? Icon(
+                          Icons.person,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        )
+                      : SvgPicture.asset(
+                          "assets/icons/chatgpt-icon.svg",
+                          allowDrawingOutsideViewBox: true,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
                 ),
                 const SizedBox(width: 5),
                 Text(sender),
@@ -160,59 +199,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget buildListMessage() {
     return Observer(
-      builder: (context) => ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        separatorBuilder: (context, index) => const SizedBox(height: 5),
-        itemBuilder: (context, index) {
-          // index == _messageStore.listMessage.length
-          //     ? (_messageStore.streamMessage != null
-          //         ? Observer(
-          //             builder: (context) => StreamBuilder<String>(
-          //               stream: _messageStore.streamMessage,
-          //               builder: (context, snapshot) {
-          //                 if (snapshot.hasData &&
-          //                     snapshot.data != null &&
-          //                     snapshot.data!.isNotEmpty) {
-          //                   return buildItem(
-          //                       context, Role.assistant.name, snapshot.data!);
-          //                 } else {
-          //                   return const SizedBox();
-          //                 }
-          //               },
-          //             ),
-          //           )
-          //         : const SizedBox())
-          //     :
+      builder: (context) {
+        final listMessage = _messageStore.listMessage.reversed.toList();
+        bool isResponding = _messageStore.getResponseMessage != null;
 
-          if (index == _messageStore.listMessage.length) {
-            if (_messageStore.responseMessage != null) {
-              return StreamBuilder<String>(
-                stream: _messageStore.responseMessage,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.active &&
-                      snapshot.hasData &&
-                      snapshot.data != null &&
-                      snapshot.data!.isNotEmpty) {
-                    return buildItem(Role.assistant.name, snapshot.requireData);
-                  } else {
-                    return const SizedBox();
-                  }
-                },
-              );
+        return ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          reverse: true,
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: List.generate(listMessage.length + 1, (index) {
+            if (index == 0) {
+              if (isResponding) {
+                return Observer(
+                  name: "responseMessage",
+                  builder: (context) {
+                    return buildItem(
+                      _messageStore.getResponseMessage!.role,
+                      _messageStore.getResponseMessage!.title,
+                    );
+                  },
+                );
+              } else {
+                return const SizedBox();
+              }
             } else {
-              return const SizedBox();
+              final message = listMessage.elementAt(index - 1);
+              return buildItem(message.role, message.title);
             }
-          } else {
-            final messageUI = _messageStore.listMessage.elementAt(index);
-            return buildItem(
-              messageUI.message.role,
-              messageUI.message.title,
-            );
-          }
-        },
-        itemCount: _messageStore.listMessage.length + 1,
-        controller: ScrollController(),
-      ),
+          }),
+          controller: ScrollController(),
+        );
+      },
     );
   }
 
@@ -378,7 +395,7 @@ class _InputWidgetState extends State<InputWidget> {
               IconButton(
                 style: ButtonStyle(
                   backgroundColor: MaterialStateProperty.all<Color>(
-                    Theme.of(context).primaryColor,
+                    Theme.of(context).buttonTheme.colorScheme!.primary,
                   ),
                 ),
                 padding: const EdgeInsets.only(left: 0, right: 4),
