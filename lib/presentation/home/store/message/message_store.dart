@@ -62,6 +62,7 @@ abstract class _MessageStore with Store {
 
   @action
   Future<void> changeThread({Thread? thread}) async {
+    if (this.thread == null && thread == null) return;
     if (this.thread != null && thread == null) {
       listMessage.clear();
       this.thread = null;
